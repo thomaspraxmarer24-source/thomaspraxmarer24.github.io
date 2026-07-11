@@ -1,0 +1,1539 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#07130f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Neon Pinball" />
+    <meta name="description" content="Neon Strike Pinball – ein mobiles Flipperspiel für iPhone und Android." />
+    <title>Neon Strike Pinball</title>
+    <style>
+:root {
+  color-scheme: dark;
+  --cyan: #29f4ff;
+  --cyan-soft: rgba(41, 244, 255, 0.35);
+  --pink: #ff2f93;
+  --yellow: #ffe65a;
+  --ink: #020806;
+  --panel: rgba(2, 10, 8, 0.84);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 18%, #12352a 0%, #06110d 38%, #010403 76%),
+    #010403;
+  font-family: "Arial Narrow", "Roboto Condensed", Impact, system-ui, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+}
+
+#game-shell {
+  position: relative;
+  width: min(100vw, 600px);
+  height: 100dvh;
+  min-height: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+  isolation: isolate;
+  background: #04100c;
+  box-shadow: 0 0 70px rgba(0, 255, 187, 0.16);
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+}
+
+#game canvas {
+  display: block;
+  margin: auto;
+}
+
+.hud {
+  position: absolute;
+  z-index: 8;
+  top: calc(8px + var(--safe-top));
+  left: 10px;
+  right: 10px;
+  display: grid;
+  grid-template-columns: minmax(92px, 1fr) auto minmax(92px, 1fr);
+  align-items: start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud-card {
+  min-width: 0;
+  padding: 7px 10px 6px;
+  border: 1px solid rgba(41, 244, 255, 0.7);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(5, 21, 17, 0.92), rgba(1, 7, 5, 0.8));
+  box-shadow: 0 0 14px rgba(41, 244, 255, 0.23), inset 0 0 10px rgba(41, 244, 255, 0.07);
+}
+
+.hud-card--right {
+  text-align: right;
+}
+
+.hud-label {
+  display: block;
+  color: var(--yellow);
+  font-size: clamp(8px, 2.2vw, 11px);
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+.hud strong {
+  display: block;
+  overflow: hidden;
+  color: #ff5672;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: clamp(16px, 5.1vw, 27px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  text-shadow: 0 0 9px rgba(255, 45, 91, 0.8);
+}
+
+.hud-center {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding-top: 2px;
+}
+
+#status {
+  max-width: 130px;
+  overflow: hidden;
+  color: #ecfff8;
+  font-size: clamp(8px, 2.4vw, 12px);
+  letter-spacing: 0.11em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.ball-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.ball-dots i {
+  width: clamp(7px, 2vw, 10px);
+  height: clamp(7px, 2vw, 10px);
+  border: 1px solid white;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 13%, #b9d5d0 22%, #435b56 62%, #10201c 100%);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.6);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.ball-dots i.used {
+  opacity: 0.14;
+  transform: scale(0.72);
+}
+
+.icon-button {
+  position: absolute;
+  z-index: 15;
+  top: calc(67px + var(--safe-top));
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  color: white;
+  background: rgba(0, 8, 5, 0.55);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  cursor: pointer;
+}
+
+.overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: calc(70px + var(--safe-top)) 26px calc(105px + var(--safe-bottom));
+  background:
+    radial-gradient(circle at 50% 39%, rgba(28, 110, 75, 0.7), transparent 31%),
+    linear-gradient(180deg, rgba(0, 5, 3, 0.76), rgba(0, 5, 3, 0.94));
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 240ms ease, visibility 240ms ease;
+}
+
+.overlay--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.logo-badge {
+  display: grid;
+  width: clamp(72px, 21vw, 110px);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 3px solid var(--yellow);
+  border-radius: 50%;
+  color: var(--yellow);
+  background: radial-gradient(circle, #ff2b4d 0 42%, #810c31 43% 62%, #091510 63%);
+  box-shadow: 0 0 16px #ff315d, 0 0 38px rgba(255, 230, 90, 0.45), inset 0 0 15px #ffdf5a;
+  font-size: clamp(34px, 10vw, 54px);
+  transform: rotate(-9deg);
+  animation: badgePulse 1.25s ease-in-out infinite alternate;
+}
+
+.eyebrow {
+  margin: 22px 0 3px;
+  color: var(--cyan);
+  font-size: clamp(10px, 3vw, 15px);
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-shadow: 0 0 12px var(--cyan);
+}
+
+h1 {
+  margin: 0;
+  color: white;
+  font-size: clamp(51px, 15vw, 86px);
+  font-style: italic;
+  font-weight: 1000;
+  letter-spacing: -0.055em;
+  line-height: 0.72;
+  text-align: center;
+  text-shadow: 3px 4px 0 #061d14, 0 0 18px rgba(255, 255, 255, 0.34);
+  transform: skew(-5deg);
+}
+
+h1 em {
+  color: var(--pink);
+  font-style: inherit;
+  text-shadow: 3px 4px 0 #3e061f, 0 0 18px rgba(255, 47, 147, 0.76);
+}
+
+.overlay-copy {
+  max-width: 330px;
+  margin: 24px 0 18px;
+  color: rgba(235, 255, 248, 0.82);
+  font-family: system-ui, sans-serif;
+  font-size: clamp(12px, 3.3vw, 16px);
+  line-height: 1.45;
+  text-align: center;
+}
+
+.start-button {
+  position: relative;
+  display: grid;
+  min-width: min(80vw, 320px);
+  padding: 15px 26px 13px;
+  overflow: hidden;
+  border: 2px solid #fff4a8;
+  border-radius: 14px;
+  color: #08110d;
+  background: linear-gradient(180deg, #fff56d, #ffc62e);
+  box-shadow: 0 5px 0 #9c4b0d, 0 0 22px rgba(255, 222, 55, 0.66);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.start-button::after {
+  position: absolute;
+  top: -80%;
+  left: -35%;
+  width: 22%;
+  height: 260%;
+  background: rgba(255, 255, 255, 0.64);
+  content: "";
+  transform: rotate(24deg);
+  animation: shine 2.1s ease-in-out infinite;
+}
+
+.start-button:active {
+  box-shadow: 0 2px 0 #9c4b0d, 0 0 28px rgba(255, 222, 55, 0.86);
+  transform: translateY(3px);
+}
+
+.start-button span {
+  font-size: clamp(18px, 5vw, 26px);
+  font-weight: 1000;
+  letter-spacing: 0.06em;
+}
+
+.start-button small {
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  opacity: 0.64;
+}
+
+.desktop-hint {
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+}
+
+.controls {
+  position: absolute;
+  z-index: 12;
+  right: 0;
+  bottom: max(9px, var(--safe-bottom));
+  left: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  padding: 0 clamp(8px, 4vw, 22px);
+  pointer-events: none;
+}
+
+.control,
+.launch-control {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.control {
+  display: grid;
+  width: clamp(76px, 22vw, 112px);
+  aspect-ratio: 1.28;
+  place-content: center;
+  border: 2px solid rgba(41, 244, 255, 0.72);
+  border-radius: 42% 42% 30% 30%;
+  color: white;
+  background: linear-gradient(180deg, rgba(8, 43, 34, 0.86), rgba(1, 13, 10, 0.9));
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.75), 0 0 15px rgba(41, 244, 255, 0.24), inset 0 0 13px rgba(41, 244, 255, 0.08);
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.control--left {
+  justify-self: start;
+  transform: rotate(-4deg);
+}
+
+.control--right {
+  justify-self: end;
+  transform: rotate(4deg);
+}
+
+.control span {
+  color: var(--cyan);
+  font-size: clamp(24px, 7vw, 38px);
+  line-height: 0.9;
+  text-shadow: 0 0 13px var(--cyan);
+}
+
+.control small,
+.launch-control small {
+  display: block;
+  margin-top: 3px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.control.is-active {
+  color: #fff;
+  background: linear-gradient(180deg, #ff3f59, #85112e);
+  box-shadow: 0 1px 0 #350411, 0 0 24px rgba(255, 47, 87, 0.9), inset 0 0 16px rgba(255, 255, 255, 0.25);
+  opacity: 1;
+}
+
+.control.is-active span {
+  color: var(--yellow);
+  text-shadow: 0 0 13px var(--yellow);
+}
+
+.launch-control {
+  display: grid;
+  width: clamp(53px, 14vw, 70px);
+  aspect-ratio: 1;
+  place-content: center;
+  margin-bottom: 2px;
+  border: 2px solid #ffd86b;
+  border-radius: 50%;
+  color: #fff4b4;
+  background: radial-gradient(circle, rgba(255, 48, 74, 0.92), rgba(93, 5, 31, 0.95));
+  box-shadow: 0 3px 0 #3a0313, 0 0 15px rgba(255, 78, 78, 0.42);
+  cursor: pointer;
+}
+
+.launch-control span {
+  font-size: clamp(18px, 5vw, 27px);
+  line-height: 0.8;
+}
+
+.launch-control.is-ready {
+  animation: launchPulse 0.72s ease-in-out infinite alternate;
+}
+
+#flash {
+  position: absolute;
+  z-index: 11;
+  inset: 0;
+  pointer-events: none;
+  background: white;
+  opacity: 0;
+}
+
+#flash.flash {
+  animation: flash 350ms ease-out;
+}
+
+#rotate-hint {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: white;
+  background: rgba(0, 7, 5, 0.94);
+  font-family: system-ui, sans-serif;
+  font-size: 18px;
+  text-align: center;
+}
+
+@keyframes badgePulse {
+  to { transform: rotate(9deg) scale(1.04); filter: brightness(1.18); }
+}
+
+@keyframes shine {
+  0%, 46% { left: -35%; }
+  72%, 100% { left: 125%; }
+}
+
+@keyframes launchPulse {
+  to { box-shadow: 0 3px 0 #3a0313, 0 0 28px rgba(255, 231, 84, 0.95); transform: scale(1.06); }
+}
+
+@keyframes flash {
+  0% { opacity: 0.72; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  #rotate-hint { display: flex; }
+}
+
+@media (min-width: 740px) {
+  #game-shell {
+    border-right: 1px solid rgba(41, 244, 255, 0.18);
+    border-left: 1px solid rgba(41, 244, 255, 0.18);
+  }
+}
+
+    </style>
+</head>
+  <body>
+    <main id="game-shell" aria-label="Neon Strike Pinball">
+      <div id="game" aria-hidden="true"></div>
+
+      <header class="hud" aria-live="polite">
+        <div class="hud-card">
+          <span class="hud-label">SCORE</span>
+          <strong id="score">000000</strong>
+        </div>
+        <div class="hud-center">
+          <span id="status">BEREIT</span>
+          <div class="ball-dots" id="ball-dots" aria-label="3 Kugeln">
+            <i></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="hud-card hud-card--right">
+          <span class="hud-label">BEST</span>
+          <strong id="best">000000</strong>
+        </div>
+      </header>
+
+      <button id="sound-button" class="icon-button" type="button" aria-label="Ton ausschalten" aria-pressed="false">🔊</button>
+
+      <section id="start-overlay" class="overlay overlay--visible" aria-labelledby="game-title">
+        <div class="logo-badge" aria-hidden="true">
+          <span>★</span>
+        </div>
+        <p class="eyebrow">MOBILE ARCADE</p>
+        <h1 id="game-title">NEON<br /><em>STRIKE</em></h1>
+        <p id="overlay-copy" class="overlay-copy">Halte links oder rechts gedrückt, um die Flipper zu bewegen.</p>
+        <button id="start-button" class="start-button" type="button">
+          <span id="start-label">SPIEL STARTEN</span>
+          <small>3 KUGELN · MIT SOUND</small>
+        </button>
+        <p class="desktop-hint">Tastatur: A / ← &nbsp; · &nbsp; D / → &nbsp; · &nbsp; Leertaste</p>
+      </section>
+
+      <div id="flash" aria-hidden="true"></div>
+
+      <nav class="controls" aria-label="Spielsteuerung">
+        <button id="left-control" class="control control--left" type="button" aria-label="Linker Flipper">
+          <span>◀</span><small>LINKS</small>
+        </button>
+        <button id="launch-control" class="launch-control" type="button" aria-label="Kugel abschießen">
+          <span>▲</span><small>LAUNCH</small>
+        </button>
+        <button id="right-control" class="control control--right" type="button" aria-label="Rechter Flipper">
+          <span>▶</span><small>RECHTS</small>
+        </button>
+      </nav>
+
+      <div id="rotate-hint" role="status">Für das beste Spielgefühl: Gerät hochkant halten.</div>
+    </main>
+
+    <noscript>Dieses Spiel benötigt JavaScript.</noscript>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+    <script>
+(() => {
+  "use strict";
+
+  const WIDTH = 600;
+  const HEIGHT = 1000;
+  const STORAGE_KEY = "neon-strike-pinball-best";
+
+  const ui = {
+    score: document.querySelector("#score"),
+    best: document.querySelector("#best"),
+    status: document.querySelector("#status"),
+    dots: [...document.querySelectorAll("#ball-dots i")],
+    overlay: document.querySelector("#start-overlay"),
+    overlayCopy: document.querySelector("#overlay-copy"),
+    start: document.querySelector("#start-button"),
+    startLabel: document.querySelector("#start-label"),
+    sound: document.querySelector("#sound-button"),
+    left: document.querySelector("#left-control"),
+    right: document.querySelector("#right-control"),
+    launch: document.querySelector("#launch-control"),
+    flash: document.querySelector("#flash")
+  };
+
+  function formatScore(value) {
+    return Math.max(0, Math.round(value)).toString().padStart(6, "0");
+  }
+
+  function safeBestScore() {
+    try {
+      return Number.parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10) || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  class ArcadeAudio {
+    constructor() {
+      this.context = null;
+      this.master = null;
+      this.muted = false;
+    }
+
+    unlock() {
+      if (!this.context) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        this.context = new AudioContext();
+        this.master = this.context.createGain();
+        this.master.gain.value = this.muted ? 0 : 0.62;
+        this.master.connect(this.context.destination);
+      }
+      if (this.context.state === "suspended") this.context.resume();
+
+      const buffer = this.context.createBuffer(1, 1, this.context.sampleRate);
+      const source = this.context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.master);
+      source.start(0);
+    }
+
+    setMuted(muted) {
+      this.muted = muted;
+      if (this.master && this.context) {
+        this.master.gain.cancelScheduledValues(this.context.currentTime);
+        this.master.gain.setTargetAtTime(muted ? 0 : 0.62, this.context.currentTime, 0.01);
+      }
+    }
+
+    tone(from, to, duration, type = "sine", volume = 0.12, delay = 0) {
+      if (!this.context || !this.master || this.muted) return;
+      const now = this.context.currentTime + delay;
+      const oscillator = this.context.createOscillator();
+      const gain = this.context.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(Math.max(20, from), now);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, to), now + duration);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + Math.min(0.012, duration * 0.2));
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      oscillator.connect(gain);
+      gain.connect(this.master);
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.02);
+    }
+
+    noise(duration = 0.07, volume = 0.07, filterFrequency = 1200) {
+      if (!this.context || !this.master || this.muted) return;
+      const length = Math.max(1, Math.floor(this.context.sampleRate * duration));
+      const buffer = this.context.createBuffer(1, length, this.context.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+      const source = this.context.createBufferSource();
+      const filter = this.context.createBiquadFilter();
+      const gain = this.context.createGain();
+      filter.type = "bandpass";
+      filter.frequency.value = filterFrequency;
+      filter.Q.value = 0.75;
+      gain.gain.value = volume;
+      source.buffer = buffer;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      source.start();
+    }
+
+    play(name) {
+      switch (name) {
+        case "start":
+          this.tone(220, 440, 0.09, "square", 0.08);
+          this.tone(330, 660, 0.11, "square", 0.07, 0.09);
+          this.tone(440, 880, 0.14, "square", 0.06, 0.18);
+          break;
+        case "flipper":
+          this.tone(96, 58, 0.045, "square", 0.075);
+          this.noise(0.035, 0.035, 850);
+          break;
+        case "launch":
+          this.tone(95, 760, 0.24, "sawtooth", 0.07);
+          this.noise(0.16, 0.025, 1600);
+          break;
+        case "bumper":
+          this.tone(610, 330, 0.1, "square", 0.095);
+          this.tone(920, 560, 0.07, "sine", 0.06);
+          break;
+        case "target":
+          this.tone(760, 1120, 0.1, "sine", 0.085);
+          break;
+        case "rollover":
+          this.tone(1040, 1370, 0.07, "sine", 0.05);
+          break;
+        case "jackpot":
+          [262, 330, 392, 523].forEach((frequency, index) => {
+            this.tone(frequency, frequency * 1.25, 0.22, "square", 0.055, index * 0.085);
+          });
+          break;
+        case "drain":
+          this.tone(420, 78, 0.5, "sawtooth", 0.085);
+          break;
+        case "gameover":
+          this.tone(250, 120, 0.28, "square", 0.055);
+          this.tone(180, 70, 0.38, "square", 0.05, 0.24);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  const audio = new ArcadeAudio();
+  const controls = { left: false, right: false };
+  let pendingStart = false;
+
+  function setControl(name, pressed) {
+    if (controls[name] === pressed) return;
+    controls[name] = pressed;
+    ui[name].classList.toggle("is-active", pressed);
+    if (pressed && window.pinballScene && window.pinballScene.running) {
+      audio.play("flipper");
+      window.pinballScene.bumpFlipper(name);
+    }
+  }
+
+  function bindHold(button, name) {
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      button.setPointerCapture?.(event.pointerId);
+      setControl(name, true);
+    });
+    button.addEventListener("pointerup", (event) => {
+      event.preventDefault();
+      setControl(name, false);
+    });
+    button.addEventListener("pointercancel", () => setControl(name, false));
+    button.addEventListener("lostpointercapture", () => setControl(name, false));
+  }
+
+  bindHold(ui.left, "left");
+  bindHold(ui.right, "right");
+
+  window.addEventListener("pointerup", () => {
+    setControl("left", false);
+    setControl("right", false);
+  });
+
+  window.addEventListener("blur", () => {
+    setControl("left", false);
+    setControl("right", false);
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (["ArrowLeft", "ArrowRight", "Space", "KeyA", "KeyD"].includes(event.code)) event.preventDefault();
+    if (event.code === "ArrowLeft" || event.code === "KeyA") setControl("left", true);
+    if (event.code === "ArrowRight" || event.code === "KeyD") setControl("right", true);
+    if (event.code === "Space") {
+      audio.unlock();
+      window.pinballScene?.launchBall();
+    }
+  }, { passive: false });
+
+  window.addEventListener("keyup", (event) => {
+    if (event.code === "ArrowLeft" || event.code === "KeyA") setControl("left", false);
+    if (event.code === "ArrowRight" || event.code === "KeyD") setControl("right", false);
+  });
+
+  ui.launch.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    audio.unlock();
+    window.pinballScene?.launchBall();
+  });
+
+  ui.sound.addEventListener("click", () => {
+    audio.unlock();
+    audio.setMuted(!audio.muted);
+    ui.sound.textContent = audio.muted ? "🔇" : "🔊";
+    ui.sound.setAttribute("aria-label", audio.muted ? "Ton einschalten" : "Ton ausschalten");
+    ui.sound.setAttribute("aria-pressed", String(audio.muted));
+  });
+
+  ui.start.addEventListener("click", (event) => {
+    event.preventDefault();
+    audio.unlock();
+    if (window.pinballScene) {
+      window.pinballScene.startGame();
+    } else {
+      pendingStart = true;
+      ui.startLabel.textContent = "LÄDT…";
+    }
+  });
+
+  function hideOverlay() {
+    ui.overlay.classList.remove("overlay--visible");
+    ui.overlay.setAttribute("aria-hidden", "true");
+  }
+
+  function showOverlay(score, best) {
+    ui.startLabel.textContent = "NOCHMAL SPIELEN";
+    ui.overlayCopy.textContent = `Dein Score: ${formatScore(score)} · Rekord: ${formatScore(best)}`;
+    ui.overlay.classList.add("overlay--visible");
+    ui.overlay.setAttribute("aria-hidden", "false");
+  }
+
+  function screenFlash() {
+    ui.flash.classList.remove("flash");
+    void ui.flash.offsetWidth;
+    ui.flash.classList.add("flash");
+  }
+
+  function updateHud(score, best, balls, status) {
+    ui.score.textContent = formatScore(score);
+    ui.best.textContent = formatScore(best);
+    ui.status.textContent = status;
+    ui.dots.forEach((dot, index) => dot.classList.toggle("used", index >= balls));
+    document.querySelector("#ball-dots").setAttribute("aria-label", `${balls} Kugeln übrig`);
+  }
+
+  class PinballScene extends Phaser.Scene {
+    constructor() {
+      super("Pinball");
+      this.running = false;
+      this.score = 0;
+      this.best = safeBestScore();
+      this.balls = 3;
+      this.ball = null;
+      this.awaitingLaunch = false;
+      this.flippers = {};
+      this.hitObjects = new Map();
+      this.targetHits = new Set();
+      this.lastHit = new Map();
+      this.trail = [];
+      this.statusText = "BEREIT";
+      this.lastBallMotion = 0;
+      this.lastBallPosition = null;
+    }
+
+    create() {
+      window.pinballScene = this;
+      this.Matter = Phaser.Physics.Matter.Matter;
+      this.createTextures();
+      this.drawBoard();
+      this.createTablePhysics();
+      this.createPlayfieldObjects();
+      this.createFlippers();
+      this.trailGraphics = this.add.graphics().setDepth(14);
+      this.matter.world.on("collisionstart", this.onCollisionStart, this);
+      this.cameras.main.setBackgroundColor("#020806");
+
+      updateHud(0, this.best, 3, "DRÜCKE START");
+      this.time.delayedCall(80, () => ui.start.focus({ preventScroll: true }));
+      if (pendingStart) {
+        pendingStart = false;
+        this.time.delayedCall(0, () => this.startGame());
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          setControl("left", false);
+          setControl("right", false);
+          this.scene.pause();
+        } else if (this.scene.isPaused()) {
+          this.scene.resume();
+        }
+      });
+    }
+
+    createTextures() {
+      const ballTexture = this.textures.createCanvas("steel-ball", 40, 40);
+      const ballContext = ballTexture.context;
+      const ballGradient = ballContext.createRadialGradient(13, 10, 2, 20, 20, 19);
+      ballGradient.addColorStop(0, "#ffffff");
+      ballGradient.addColorStop(0.18, "#d9eeeb");
+      ballGradient.addColorStop(0.55, "#79918b");
+      ballGradient.addColorStop(0.83, "#263b35");
+      ballGradient.addColorStop(1, "#09110e");
+      ballContext.fillStyle = ballGradient;
+      ballContext.beginPath();
+      ballContext.arc(20, 20, 17, 0, Math.PI * 2);
+      ballContext.fill();
+      ballContext.strokeStyle = "rgba(255,255,255,.85)";
+      ballContext.lineWidth = 2;
+      ballContext.stroke();
+      ballTexture.refresh();
+
+      const flipperTexture = this.textures.createCanvas("red-flipper", 150, 46);
+      const context = flipperTexture.context;
+      const gradient = context.createLinearGradient(0, 0, 0, 46);
+      gradient.addColorStop(0, "#ff6a63");
+      gradient.addColorStop(0.42, "#ed243d");
+      gradient.addColorStop(1, "#790c28");
+      context.shadowColor = "rgba(255,44,84,.9)";
+      context.shadowBlur = 8;
+      context.fillStyle = gradient;
+      context.strokeStyle = "#fff1d0";
+      context.lineWidth = 4;
+      context.beginPath();
+      context.roundRect(6, 6, 138, 34, 17);
+      context.fill();
+      context.stroke();
+      context.shadowBlur = 0;
+      context.fillStyle = "rgba(255,255,255,.58)";
+      context.beginPath();
+      context.roundRect(20, 11, 98, 5, 3);
+      context.fill();
+      flipperTexture.refresh();
+    }
+
+    drawBoard() {
+      const background = this.add.graphics().setDepth(-30);
+      background.fillStyle(0x010504, 1).fillRect(0, 0, WIDTH, HEIGHT);
+      background.fillStyle(0x081b14, 1);
+      background.fillPoints([
+        new Phaser.Geom.Point(86, 27),
+        new Phaser.Geom.Point(514, 27),
+        new Phaser.Geom.Point(575, 105),
+        new Phaser.Geom.Point(575, 795),
+        new Phaser.Geom.Point(515, 916),
+        new Phaser.Geom.Point(300, 986),
+        new Phaser.Geom.Point(85, 916),
+        new Phaser.Geom.Point(25, 795),
+        new Phaser.Geom.Point(25, 110)
+      ], true);
+      background.lineStyle(15, 0x0b3827, 1);
+      background.strokePoints([
+        new Phaser.Geom.Point(86, 27), new Phaser.Geom.Point(514, 27), new Phaser.Geom.Point(575, 105),
+        new Phaser.Geom.Point(575, 795), new Phaser.Geom.Point(515, 916), new Phaser.Geom.Point(300, 986),
+        new Phaser.Geom.Point(85, 916), new Phaser.Geom.Point(25, 795), new Phaser.Geom.Point(25, 110)
+      ], true);
+      background.lineStyle(3, 0x27f3ff, 0.62);
+      background.strokePoints([
+        new Phaser.Geom.Point(86, 27), new Phaser.Geom.Point(514, 27), new Phaser.Geom.Point(575, 105),
+        new Phaser.Geom.Point(575, 795), new Phaser.Geom.Point(515, 916), new Phaser.Geom.Point(300, 986),
+        new Phaser.Geom.Point(85, 916), new Phaser.Geom.Point(25, 795), new Phaser.Geom.Point(25, 110)
+      ], true);
+
+      for (let y = 100; y < 920; y += 48) {
+        background.lineStyle(1, 0x2ea873, 0.08);
+        background.lineBetween(45, y, 555, y);
+      }
+      for (let x = 68; x < 550; x += 48) {
+        background.lineStyle(1, 0x2ea873, 0.06);
+        background.lineBetween(x, 70, x, 900);
+      }
+
+      this.add.text(300, 83, "NEON STRIKE", {
+        fontFamily: "Impact, Arial Narrow, sans-serif",
+        fontSize: "34px",
+        fontStyle: "italic",
+        color: "#f5fff9",
+        stroke: "#073021",
+        strokeThickness: 7,
+        letterSpacing: 2
+      }).setOrigin(0.5).setDepth(-20).setShadow(0, 0, "#28f3ff", 12, true, true);
+
+      this.add.text(300, 110, "PINBALL HIT STRIKE", {
+        fontFamily: "Arial Narrow, sans-serif",
+        fontSize: "12px",
+        fontStyle: "bold",
+        color: "#29f4ff",
+        letterSpacing: 3
+      }).setOrigin(0.5).setDepth(-20);
+
+      const centerStar = this.add.star(300, 395, 8, 62, 116, 0xff264f, 0.9)
+        .setStrokeStyle(4, 0xffdc50, 0.8)
+        .setDepth(-16);
+      this.tweens.add({ targets: centerStar, angle: 360, duration: 18000, repeat: -1 });
+      this.add.circle(300, 395, 57, 0x0c3c29, 1).setStrokeStyle(5, 0xf6f8e8, 0.9).setDepth(-15);
+      this.add.text(300, 382, "SPECIAL", {
+        fontFamily: "Arial Narrow, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#ffe65a"
+      }).setOrigin(0.5).setDepth(-14);
+      this.add.text(300, 405, "JACKPOT", {
+        fontFamily: "Impact, sans-serif", fontSize: "19px", color: "#ffffff"
+      }).setOrigin(0.5).setDepth(-14);
+
+      const lane = this.add.graphics().setDepth(-13);
+      lane.fillStyle(0x04100c, 0.8).fillRoundedRect(508, 170, 55, 770, 24);
+      lane.lineStyle(2, 0xffd84a, 0.35).strokeRoundedRect(508, 170, 55, 770, 24);
+      this.add.text(537, 687, "LAUNCH", {
+        fontFamily: "Impact, sans-serif", fontSize: "13px", color: "#ffe65a", letterSpacing: 2
+      }).setOrigin(0.5).setAngle(-90).setDepth(-11);
+
+      this.createArrowLights();
+      this.createEdgeLights();
+    }
+
+    createArrowLights() {
+      const colors = [0x1cf4ff, 0x1cf4ff, 0xffe45a, 0xff4877, 0xffe45a];
+      const ys = [700, 650, 600, 550, 500];
+      this.arrowLights = ys.map((y, index) => {
+        const glow = this.add.triangle(300, y, -28, 16, 0, -14, 28, 16, colors[index], 0.18).setDepth(-10);
+        const core = this.add.triangle(300, y, -22, 11, 0, -11, 22, 11, colors[index], 0.82)
+          .setStrokeStyle(2, 0xeaffff, 0.8)
+          .setDepth(-9);
+        this.tweens.add({
+          targets: [glow, core],
+          alpha: { from: 0.24, to: 1 },
+          scaleX: { from: 0.93, to: 1.08 },
+          scaleY: { from: 0.93, to: 1.08 },
+          duration: 420,
+          delay: index * 115,
+          yoyo: true,
+          repeat: -1,
+          repeatDelay: 540
+        });
+        return { glow, core };
+      });
+    }
+
+    createEdgeLights() {
+      for (let y = 205; y <= 795; y += 50) {
+        [52, 548].forEach((x, side) => {
+          const light = this.add.triangle(x, y, -7, 6, 7, 0, -7, -6, 0x27efff, 0.48).setDepth(-8);
+          if (side === 1) light.setFlipX(true);
+          this.tweens.add({
+            targets: light,
+            alpha: { from: 0.2, to: 1 },
+            duration: 520,
+            delay: (y + side * 180) % 650,
+            yoyo: true,
+            repeat: -1,
+            repeatDelay: 900
+          });
+        });
+      }
+    }
+
+    createTablePhysics() {
+      this.matter.world.setBounds(13, 13, WIDTH - 26, HEIGHT - 13, 26, true, true, true, false);
+
+      this.addWall(44, 150, 44, 790, 20);
+      this.addWall(566, 115, 566, 805, 18);
+      this.addWall(45, 790, 105, 900, 18);
+      this.addWall(555, 790, 495, 900, 18);
+      this.addWall(102, 900, 222, 955, 18);
+      this.addWall(498, 900, 378, 955, 18);
+      this.addWall(503, 248, 503, 875, 12, 0xffd84a, 0.55);
+      this.addWall(504, 103, 566, 165, 15, 0xffd84a, 0.55);
+      this.addWall(512, 940, 558, 940, 13, 0xff4b62, 0.9);
+
+      this.addWall(122, 683, 168, 822, 13, 0x1ff2ff, 0.55);
+      this.addWall(478, 683, 432, 822, 13, 0x1ff2ff, 0.55);
+      this.addWall(77, 650, 105, 808, 10, 0xffd84a, 0.52);
+      this.addWall(523, 650, 495, 808, 10, 0xffd84a, 0.52);
+
+      this.addWall(132, 748, 210, 804, 18, 0xff315b, 0.82, "sling-left");
+      this.addWall(468, 748, 390, 804, 18, 0xff315b, 0.82, "sling-right");
+
+      this.drainSensor = this.matter.add.rectangle(300, 992, 440, 30, {
+        isStatic: true,
+        isSensor: true,
+        label: "drain"
+      });
+
+      [
+        { x: 112, y: 632, label: "rollover-2x", color: 0xffd73b, text: "2X" },
+        { x: 155, y: 666, label: "rollover-3x", color: 0xff3da4, text: "3X" },
+        { x: 196, y: 696, label: "rollover-5x", color: 0x35dfff, text: "5X" },
+        { x: 488, y: 632, label: "rollover-2x-r", color: 0xffd73b, text: "2X" },
+        { x: 445, y: 666, label: "rollover-3x-r", color: 0xff3da4, text: "3X" },
+        { x: 404, y: 696, label: "rollover-5x-r", color: 0x35dfff, text: "5X" }
+      ].forEach((item) => {
+        this.matter.add.circle(item.x, item.y, 25, { isStatic: true, isSensor: true, label: item.label });
+        const glow = this.add.circle(item.x, item.y, 22, item.color, 0.18).setDepth(-6);
+        const ring = this.add.circle(item.x, item.y, 17, 0x07100d, 0.82).setStrokeStyle(3, item.color, 0.9).setDepth(-5);
+        const text = this.add.text(item.x, item.y, item.text, {
+          fontFamily: "Impact, sans-serif", fontSize: "15px", color: "#ffffff"
+        }).setOrigin(0.5).setDepth(-4);
+        this.tweens.add({ targets: glow, alpha: { from: 0.12, to: 0.66 }, scale: 1.3, duration: 580, yoyo: true, repeat: -1, delay: item.x });
+        this.hitObjects.set(item.label, { x: item.x, y: item.y, glow, core: ring, text, value: Number(item.text[0]) * 250 });
+      });
+    }
+
+    addWall(x1, y1, x2, y2, thickness, color = 0xe9fff5, alpha = 0.5, label = "rail") {
+      const x = (x1 + x2) / 2;
+      const y = (y1 + y2) / 2;
+      const length = Math.max(thickness, Phaser.Math.Distance.Between(x1, y1, x2, y2));
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      const body = this.matter.add.rectangle(x, y, length, thickness, {
+        isStatic: true,
+        angle,
+        label,
+        restitution: label.startsWith("sling") ? 1.24 : 0.68,
+        friction: 0.04
+      });
+      const visual = this.add.graphics().setDepth(-2);
+      visual.lineStyle(thickness + 7, 0x000000, 0.48).lineBetween(x1, y1, x2, y2);
+      visual.lineStyle(thickness, color, alpha).lineBetween(x1, y1, x2, y2);
+      visual.lineStyle(Math.max(2, thickness * 0.22), 0xffffff, Math.min(0.75, alpha + 0.12)).lineBetween(x1, y1, x2, y2);
+      return body;
+    }
+
+    createPlayfieldObjects() {
+      [
+        { x: 170, y: 183, color: 0xffdc4a, value: 700, label: "target-a", caption: "700" },
+        { x: 300, y: 158, color: 0xff4c5f, value: 1000, label: "target-b", caption: "1000" },
+        { x: 430, y: 183, color: 0xffdc4a, value: 500, label: "target-c", caption: "500" }
+      ].forEach((definition) => this.createTarget(definition));
+
+      [
+        { x: 172, y: 350, radius: 55, color: 0xffc82f, value: 1000, label: "bumper-a", caption: "10" },
+        { x: 300, y: 307, radius: 61, color: 0xff2f93, value: 3000, label: "bumper-b", caption: "30" },
+        { x: 428, y: 350, radius: 55, color: 0x2ccfff, value: 2000, label: "bumper-c", caption: "20" }
+      ].forEach((definition) => this.createBumper(definition));
+
+      [
+        { x: 110, y: 485, radius: 15 }, { x: 490, y: 485, radius: 15 },
+        { x: 222, y: 500, radius: 14 }, { x: 378, y: 500, radius: 14 },
+        { x: 94, y: 610, radius: 13 }, { x: 506, y: 610, radius: 13 },
+        { x: 188, y: 738, radius: 13 }, { x: 412, y: 738, radius: 13 }
+      ].forEach((post, index) => this.createPost(post.x, post.y, post.radius, `post-${index}`));
+
+      this.createDropTarget(230, 475, -20, "drop-left");
+      this.createDropTarget(370, 475, 20, "drop-right");
+    }
+
+    createTarget(definition) {
+      const { x, y, color, value, label, caption } = definition;
+      const body = this.matter.add.circle(x, y, 27, {
+        isStatic: true, label, restitution: 1.08, friction: 0.01
+      });
+      const glow = this.add.circle(x, y, 38, color, 0.14).setDepth(-3);
+      const outer = this.add.circle(x, y, 29, 0xf4f6df, 1).setStrokeStyle(4, color, 1).setDepth(-2);
+      const inner = this.add.star(x, y, 9, 15, 25, color, 0.92).setDepth(-1);
+      const text = this.add.text(x, y + 42, `${caption} PTS`, {
+        fontFamily: "Arial Narrow, sans-serif", fontSize: "11px", fontStyle: "bold", color: "#fff4a8"
+      }).setOrigin(0.5).setDepth(-1);
+      this.tweens.add({ targets: glow, alpha: { from: 0.12, to: 0.52 }, scale: 1.12, duration: 760, yoyo: true, repeat: -1, delay: x });
+      this.hitObjects.set(label, { x, y, body, glow, outer, inner, text, value, isTarget: true, color });
+    }
+
+    createBumper(definition) {
+      const { x, y, radius, color, value, label, caption } = definition;
+      const body = this.matter.add.circle(x, y, radius - 7, {
+        isStatic: true, label, restitution: 1.4, friction: 0
+      });
+      const glow = this.add.circle(x, y, radius + 17, color, 0.1).setDepth(-4);
+      const outer = this.add.circle(x, y, radius, 0xf4f7e5, 0.98).setStrokeStyle(5, color, 0.98).setDepth(-3);
+      const teeth = this.add.star(x, y, 16, radius - 23, radius - 9, color, 0.95).setDepth(-2);
+      const core = this.add.circle(x, y, radius - 28, 0x0b281d, 1).setStrokeStyle(2, 0xffffff, 0.72).setDepth(-1);
+      const number = this.add.text(x, y - 3, caption, {
+        fontFamily: "Impact, sans-serif", fontSize: `${Math.round(radius * 0.46)}px`, color: "#ffffff"
+      }).setOrigin(0.5).setDepth(0);
+      const points = this.add.text(x, y + radius * 0.29, "HIT", {
+        fontFamily: "Arial Narrow, sans-serif", fontSize: "10px", fontStyle: "bold", color: "#ffe65a"
+      }).setOrigin(0.5).setDepth(0);
+      this.tweens.add({ targets: teeth, angle: 360, duration: 9000 + x * 7, repeat: -1 });
+      this.tweens.add({ targets: glow, alpha: { from: 0.08, to: 0.42 }, scale: 1.08, duration: 690, yoyo: true, repeat: -1, delay: y });
+      this.hitObjects.set(label, { x, y, radius, body, glow, outer, teeth, core, number, points, value, color, isBumper: true });
+    }
+
+    createPost(x, y, radius, label) {
+      const body = this.matter.add.circle(x, y, radius, { isStatic: true, label, restitution: 0.92, friction: 0.01 });
+      const glow = this.add.circle(x, y, radius + 6, 0x35efff, 0.13).setDepth(-2);
+      const core = this.add.circle(x, y, radius, 0xe9fff8, 0.96).setStrokeStyle(3, 0x1dcfe7, 0.85).setDepth(-1);
+      this.hitObjects.set(label, { x, y, body, glow, core, value: 100 });
+    }
+
+    createDropTarget(x, y, angle, label) {
+      const radians = Phaser.Math.DegToRad(angle);
+      const body = this.matter.add.rectangle(x, y, 22, 68, {
+        isStatic: true, angle: radians, label, restitution: 0.9
+      });
+      const visual = this.add.rectangle(x, y, 22, 68, 0xf1fff9, 0.95)
+        .setStrokeStyle(3, 0x27f3ff, 0.75)
+        .setAngle(angle)
+        .setDepth(-1);
+      const glow = this.add.rectangle(x, y, 31, 77, 0x27f3ff, 0.12).setAngle(angle).setDepth(-2);
+      this.hitObjects.set(label, { x, y, body, visual, glow, value: 750 });
+    }
+
+    createFlippers() {
+      this.flippers.left = this.createFlipper("left", 176, 846, 0.32, -0.62);
+      this.flippers.right = this.createFlipper("right", 424, 846, -0.32, 0.62);
+    }
+
+    createFlipper(side, pivotX, pivotY, restAngle, activeAngle) {
+      const length = 132;
+      const half = length / 2;
+      const direction = side === "left" ? 1 : -1;
+      const centerX = pivotX + Math.cos(restAngle) * half * direction;
+      const centerY = pivotY + Math.sin(restAngle) * half * direction;
+      const body = this.matter.add.rectangle(centerX, centerY, length, 34, {
+        isStatic: true,
+        angle: restAngle,
+        label: `flipper-${side}`,
+        restitution: 0.25,
+        friction: 0.08,
+        chamfer: { radius: 14 }
+      });
+      const sprite = this.add.image(centerX, centerY, "red-flipper")
+        .setDisplaySize(150, 46)
+        .setRotation(restAngle)
+        .setDepth(12);
+      const pivotGlow = this.add.circle(pivotX, pivotY, 22, 0xff315b, 0.16).setDepth(11);
+      const pivot = this.add.circle(pivotX, pivotY, 12, 0xd9f5ee, 1).setStrokeStyle(3, 0x263b35, 1).setDepth(13);
+      this.tweens.add({ targets: pivotGlow, alpha: { from: 0.12, to: 0.5 }, scale: 1.2, duration: 540, yoyo: true, repeat: -1, delay: side === "left" ? 0 : 270 });
+      return { side, pivotX, pivotY, restAngle, activeAngle, angle: restAngle, body, sprite, pivot, pivotGlow, half, direction };
+    }
+
+    bumpFlipper(side) {
+      const flipper = this.flippers[side];
+      if (!flipper) return;
+      this.tweens.add({ targets: flipper.pivotGlow, alpha: 0.95, scale: 1.55, duration: 65, yoyo: true });
+    }
+
+    startGame() {
+      if (!this.scene || !this.sys.isActive()) return;
+      hideOverlay();
+      audio.play("start");
+      this.running = true;
+      this.score = 0;
+      this.balls = 3;
+      this.targetHits.clear();
+      this.resetTargetLights();
+      this.removeBall();
+      this.setStatus("KUGEL 1");
+      updateHud(this.score, this.best, this.balls, this.statusText);
+      this.time.delayedCall(260, () => {
+        this.spawnBall();
+        this.time.delayedCall(620, () => this.launchBall());
+      });
+    }
+
+    spawnBall() {
+      if (!this.running) return;
+      this.removeBall();
+      const ball = this.add.image(538, 902, "steel-ball").setDisplaySize(34, 34).setDepth(20);
+      this.matter.add.gameObject(ball, {
+        shape: { type: "circle", radius: 14 },
+        restitution: 0.76,
+        friction: 0.002,
+        frictionStatic: 0,
+        frictionAir: 0.00065,
+        density: 0.003
+      });
+      ball.body.label = "ball";
+      this.ball = ball;
+      this.awaitingLaunch = true;
+      this.trail.length = 0;
+      this.lastBallPosition = { x: ball.x, y: ball.y };
+      this.lastBallMotion = this.time.now;
+      ui.launch.classList.add("is-ready");
+      this.setStatus("LAUNCH!");
+    }
+
+    launchBall() {
+      if (!this.running || !this.awaitingLaunch || !this.ball?.body) return;
+      this.awaitingLaunch = false;
+      ui.launch.classList.remove("is-ready");
+      this.Matter.Body.setVelocity(this.ball.body, { x: -0.4, y: -32 });
+      this.Matter.Body.setAngularVelocity(this.ball.body, -0.22);
+      this.setStatus("IM SPIEL");
+      audio.play("launch");
+      this.cameras.main.shake(90, 0.003);
+    }
+
+    removeBall() {
+      if (this.ball) {
+        this.ball.destroy();
+        this.ball = null;
+      }
+      this.awaitingLaunch = false;
+      ui.launch.classList.remove("is-ready");
+      this.trail.length = 0;
+      this.trailGraphics?.clear();
+    }
+
+    onCollisionStart(event) {
+      if (!this.running || !this.ball?.body) return;
+      event.pairs.forEach((pair) => {
+        const bodyA = pair.bodyA.parent || pair.bodyA;
+        const bodyB = pair.bodyB.parent || pair.bodyB;
+        let other = null;
+        if (bodyA.label === "ball") other = bodyB;
+        if (bodyB.label === "ball") other = bodyA;
+        if (!other) return;
+        this.handleCollision(other.label || "rail", other);
+      });
+    }
+
+    handleCollision(label, body) {
+      const now = this.time.now;
+      const cooldown = label === "drain" ? 900 : label.startsWith("rail") ? 90 : 125;
+      if ((this.lastHit.get(label) || 0) + cooldown > now) return;
+      this.lastHit.set(label, now);
+
+      if (label === "drain") {
+        this.drainBall();
+        return;
+      }
+
+      if (label.startsWith("flipper")) return;
+
+      if (label.startsWith("sling")) {
+        const direction = label.endsWith("left") ? 1 : -1;
+        this.boostBall(direction * 4.2, -6.2, 19);
+        this.addScore(450, this.ball.x, this.ball.y, "SLING");
+        audio.play("bumper");
+        return;
+      }
+
+      const hit = this.hitObjects.get(label);
+      if (hit) {
+        if (label.startsWith("rollover")) {
+          this.addScore(hit.value, hit.x, hit.y, label.includes("5x") ? "5X" : label.includes("3x") ? "3X" : "2X");
+          audio.play("rollover");
+          this.flashHit(hit, 0.9);
+          return;
+        }
+
+        this.addScore(hit.value, hit.x, hit.y, hit.isBumper ? `+${hit.value}` : "HIT");
+        this.flashHit(hit, hit.isBumper ? 1.45 : 1.15);
+        if (hit.isBumper) {
+          const dx = this.ball.x - hit.x;
+          const dy = this.ball.y - hit.y;
+          const distance = Math.max(1, Math.hypot(dx, dy));
+          this.boostBall((dx / distance) * 8, (dy / distance) * 8 - 1.6, 21);
+          audio.play("bumper");
+        } else if (hit.isTarget) {
+          this.targetHits.add(label);
+          audio.play("target");
+          if (this.targetHits.size === 3) this.awardJackpot();
+        } else {
+          audio.play("target");
+        }
+        return;
+      }
+
+      if (body && this.ball?.body) {
+        const speed = Math.hypot(this.ball.body.velocity.x, this.ball.body.velocity.y);
+        if (speed > 10 && now - (this.lastHit.get("rail-sound") || 0) > 130) {
+          this.lastHit.set("rail-sound", now);
+          audio.noise(0.035, 0.017, 1800);
+        }
+      }
+    }
+
+    boostBall(addX, addY, maxSpeed) {
+      if (!this.ball?.body) return;
+      const velocity = this.ball.body.velocity;
+      let x = velocity.x + addX;
+      let y = velocity.y + addY;
+      const speed = Math.hypot(x, y);
+      if (speed > maxSpeed) {
+        x = (x / speed) * maxSpeed;
+        y = (y / speed) * maxSpeed;
+      }
+      this.Matter.Body.setVelocity(this.ball.body, { x, y });
+    }
+
+    flashHit(hit, scale) {
+      const targets = [hit.glow, hit.outer, hit.core, hit.inner, hit.visual].filter(Boolean);
+      targets.forEach((target) => this.tweens.killTweensOf(target));
+      if (hit.glow) hit.glow.setAlpha(0.95).setScale(scale);
+      this.tweens.add({
+        targets,
+        alpha: { from: 1, to: 0.4 },
+        scaleX: { from: scale, to: 1 },
+        scaleY: { from: scale, to: 1 },
+        duration: 230,
+        yoyo: true,
+        onComplete: () => {
+          if (hit.isTarget && this.targetHits.has(hit.body.label)) {
+            hit.glow?.setAlpha(0.75).setScale(1.12);
+            hit.inner?.setAlpha(1);
+          }
+        }
+      });
+      this.sparkBurst(hit.x, hit.y, hit.color || 0x2cf4ff);
+      this.cameras.main.shake(55, hit.isBumper ? 0.004 : 0.002);
+    }
+
+    sparkBurst(x, y, color) {
+      for (let index = 0; index < 8; index += 1) {
+        const angle = (Math.PI * 2 * index) / 8 + Math.random() * 0.35;
+        const distance = 22 + Math.random() * 28;
+        const spark = this.add.circle(x, y, 2 + Math.random() * 2.5, color, 1).setDepth(25);
+        this.tweens.add({
+          targets: spark,
+          x: x + Math.cos(angle) * distance,
+          y: y + Math.sin(angle) * distance,
+          alpha: 0,
+          scale: 0.2,
+          duration: 210 + Math.random() * 130,
+          ease: "Cubic.easeOut",
+          onComplete: () => spark.destroy()
+        });
+      }
+    }
+
+    awardJackpot() {
+      this.addScore(10000, 300, 395, "JACKPOT!");
+      this.setStatus("JACKPOT 10.000");
+      audio.play("jackpot");
+      screenFlash();
+      this.cameras.main.flash(300, 255, 236, 90, false);
+      this.arrowLights.forEach(({ glow, core }, index) => {
+        this.time.delayedCall(index * 80, () => {
+          this.tweens.add({ targets: [glow, core], alpha: 1, scale: 1.55, duration: 110, yoyo: true, repeat: 2 });
+        });
+      });
+      this.time.delayedCall(1600, () => {
+        this.targetHits.clear();
+        this.resetTargetLights();
+        if (this.running) this.setStatus("IM SPIEL");
+      });
+    }
+
+    resetTargetLights() {
+      ["target-a", "target-b", "target-c"].forEach((label) => {
+        const target = this.hitObjects.get(label);
+        if (!target) return;
+        target.glow?.setAlpha(0.14).setScale(1);
+        target.inner?.setAlpha(0.86).setScale(1);
+      });
+    }
+
+    addScore(points, x, y, label) {
+      if (!this.running) return;
+      this.score += points;
+      if (this.score > this.best) {
+        this.best = this.score;
+        try { localStorage.setItem(STORAGE_KEY, String(this.best)); } catch (_) { /* Storage can be unavailable in private mode. */ }
+      }
+      updateHud(this.score, this.best, this.balls, this.statusText);
+      const pop = this.add.text(x, y - 28, label, {
+        fontFamily: "Impact, Arial Narrow, sans-serif",
+        fontSize: label.length > 8 ? "20px" : "17px",
+        color: "#fff36b",
+        stroke: "#4c0b28",
+        strokeThickness: 5
+      }).setOrigin(0.5).setDepth(30).setScale(0.7);
+      this.tweens.add({
+        targets: pop,
+        y: y - 78,
+        alpha: 0,
+        scale: 1.18,
+        duration: 620,
+        ease: "Cubic.easeOut",
+        onComplete: () => pop.destroy()
+      });
+    }
+
+    drainBall() {
+      if (!this.running || !this.ball) return;
+      audio.play("drain");
+      this.setStatus("KUGEL VERLOREN");
+      this.cameras.main.shake(220, 0.006);
+      this.removeBall();
+      this.balls -= 1;
+      updateHud(this.score, this.best, this.balls, this.statusText);
+
+      if (this.balls > 0) {
+        const ballNumber = 4 - this.balls;
+        this.time.delayedCall(1050, () => {
+          if (!this.running) return;
+          this.setStatus(`KUGEL ${ballNumber}`);
+          this.spawnBall();
+          this.time.delayedCall(690, () => this.launchBall());
+        });
+      } else {
+        this.time.delayedCall(900, () => this.gameOver());
+      }
+    }
+
+    gameOver() {
+      if (!this.running) return;
+      this.running = false;
+      this.awaitingLaunch = false;
+      this.setStatus("GAME OVER");
+      updateHud(this.score, this.best, 0, this.statusText);
+      audio.play("gameover");
+      showOverlay(this.score, this.best);
+    }
+
+    setStatus(status) {
+      this.statusText = status;
+      updateHud(this.score, this.best, this.balls, status);
+    }
+
+    updateFlipper(flipper, active) {
+      const target = active ? flipper.activeAngle : flipper.restAngle;
+      const delta = Phaser.Math.Clamp(target - flipper.angle, -0.17, 0.17);
+      if (Math.abs(delta) < 0.003) flipper.angle = target;
+      else flipper.angle += delta;
+
+      const centerX = flipper.pivotX + Math.cos(flipper.angle) * flipper.half * flipper.direction;
+      const centerY = flipper.pivotY + Math.sin(flipper.angle) * flipper.half * flipper.direction;
+      this.Matter.Body.setPosition(flipper.body, { x: centerX, y: centerY }, true);
+      this.Matter.Body.setAngle(flipper.body, flipper.angle, true);
+      flipper.sprite.setPosition(centerX, centerY).setRotation(flipper.angle);
+    }
+
+    update(time) {
+      this.updateFlipper(this.flippers.left, controls.left);
+      this.updateFlipper(this.flippers.right, controls.right);
+
+      this.trailGraphics.clear();
+      if (!this.ball?.body) return;
+
+      const velocity = this.ball.body.velocity;
+      const speed = Math.hypot(velocity.x, velocity.y);
+      if (speed > 32) {
+        this.Matter.Body.setVelocity(this.ball.body, {
+          x: (velocity.x / speed) * 32,
+          y: (velocity.y / speed) * 32
+        });
+      }
+
+      this.trail.unshift({ x: this.ball.x, y: this.ball.y, speed });
+      if (this.trail.length > 9) this.trail.pop();
+      this.trail.forEach((point, index) => {
+        const alpha = Math.max(0, (1 - index / this.trail.length) * Math.min(0.36, point.speed / 45));
+        this.trailGraphics.fillStyle(0x8fffea, alpha);
+        this.trailGraphics.fillCircle(point.x, point.y, Math.max(1.5, 7 - index * 0.65));
+      });
+
+      if (this.ball.y > 1040 || this.ball.x < -60 || this.ball.x > 660) this.drainBall();
+
+      if (!this.awaitingLaunch && this.running) {
+        const moved = this.lastBallPosition
+          ? Phaser.Math.Distance.Between(this.ball.x, this.ball.y, this.lastBallPosition.x, this.lastBallPosition.y)
+          : 10;
+        if (moved > 3 || speed > 1.1) {
+          this.lastBallMotion = time;
+          this.lastBallPosition = { x: this.ball.x, y: this.ball.y };
+        } else if (time - this.lastBallMotion > 3600 && this.ball.y < 910) {
+          const nudgeX = this.ball.x < WIDTH / 2 ? 2.2 : -2.2;
+          this.boostBall(nudgeX, -2.8, 12);
+          this.lastBallMotion = time;
+          this.setStatus("BALL NUDGE");
+          this.time.delayedCall(650, () => this.running && this.setStatus("IM SPIEL"));
+        }
+      }
+    }
+  }
+
+  ui.best.textContent = formatScore(safeBestScore());
+
+  if (!window.Phaser) {
+    ui.overlayCopy.textContent = "Das Spiel konnte nicht geladen werden. Bitte prüfe deine Internetverbindung und lade die Seite neu.";
+    ui.start.disabled = true;
+    return;
+  }
+
+  const game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: "game",
+    width: WIDTH,
+    height: HEIGHT,
+    backgroundColor: "#020806",
+    transparent: false,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: WIDTH,
+      height: HEIGHT
+    },
+    physics: {
+      default: "matter",
+      matter: {
+        gravity: { y: 0.72 },
+        enableSleeping: false,
+        debug: false
+      }
+    },
+    render: {
+      antialias: true,
+      roundPixels: false,
+      powerPreference: "high-performance"
+    },
+    scene: PinballScene
+  });
+
+  window.pinballGame = game;
+
+  // Standalone build: no service worker required.
+})();
+
+    </script>
+</body>
+</html>
